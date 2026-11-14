@@ -1,11 +1,15 @@
+"""Calcula la forma de una viga usando sus extremos y puntos intermedios."""
+
 import numpy as np
 import deffuncionespvf as dfp
 
-# Método de diferencias finitas centradas (segundo orden de precisión)
+
 def diffincentr(
     t, y_0, y_n, n, h, right_bc="dirichlet", kappa=0.0,
     c_func=None, forcing_func=None
 ):
+    """Devuelve la deflexión aproximada de la viga en cada punto de la malla."""
+    # Comprueba que los puntos y el paso formen una malla regular válida.
     t = np.asarray(t, dtype=float)
     if not isinstance(n, (int, np.integer)) or n < 2:
         raise ValueError("n debe ser un entero mayor o igual que 2.")
@@ -26,6 +30,7 @@ def diffincentr(
     ):
         raise ValueError("Los puntos de t deben estar uniformemente espaciados por h.")
 
+    # Reserva la respuesta y fija el extremo izquierdo conocido.
     y = np.zeros(n + 1)
     y[0] = y_0
     if right_bc == "dirichlet":
@@ -34,10 +39,11 @@ def diffincentr(
     else:
         system_size = n
 
+    # Prepara las ecuaciones que conectan cada punto con sus vecinos.
     mat = np.zeros((system_size, system_size))
     vec = np.zeros(system_size)
 
-    # Las filas 0..n-2 son las ecuaciones en los nodos t[1]..t[n-1].
+    # Calcula las filas de los puntos interiores de la viga.
     for i in range(n - 1):
         x_i = t[i + 1]
         lower = dfp.A(x_i) / h**2 - dfp.B(x_i) / (2 * h)
@@ -56,8 +62,7 @@ def diffincentr(
             mat[i, i + 1] = upper
 
     if right_bc == "robin":
-        # Elimina w[n+1] = w[n-1] - 2 h kappa w[n] en la EDO en x_n.
-        # La fila se escala por h**2 para expresar directamente el stencil.
+        # Usa el apoyo elástico para escribir la última ecuación sin un punto extra.
         x_n = t[-1]
         mat[-1, -2] = 2 * dfp.A(x_n)
         mat[-1, -1] = (
@@ -66,6 +71,7 @@ def diffincentr(
             + h**2 * c_func(x_n)
         )
         vec[-1] = h**2 * forcing_func(x_n)
+        # Encuentra todos los valores desconocidos y los coloca en la respuesta.
         solution = np.linalg.solve(mat, vec)
         y[1:] = solution
     else:

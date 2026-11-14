@@ -1,6 +1,4 @@
-'''
-Código construido para solucionar un PVI conformado por una EDO de segundo orden de la forma y'' = fld(t,y) y condiciones iniciales y(t_0)=y_0; y'(t_0)=y'_0.
-'''
+"""Resuelve un ejemplo de curva con posición y velocidad iniciales conocidas."""
 
 import numpy as np
 import met_solpvi_2ord as pvim2
@@ -8,41 +6,33 @@ import deffuncionespvi2 as dfp2
 import matplotlib.pyplot as plt
 from scipy.integrate import solve_ivp
 
-# Información de entrada
-# Condiciones iniciales para la vriable independiente
+# Indica cuándo empieza el cálculo.
 t_0 = 0.
-# Condiciones iniciales para la vriable dependiente
+# Fija la posición y la velocidad iniciales.
 y_0 = [4., 1.]
 
-# Punto final del intervalo de solución
+# Indica cuándo termina el cálculo y cuánto avanza cada paso.
 T = 3.
-# Tamaño de paso
 hp = 0.5
 
-# Calculo del número de pasos (ó número de iteraciones)
+# Ajusta el paso para que el último avance llegue justo al final.
 nit = int(round((T - t_0)/hp))
 if nit < 1:
     raise ValueError("El intervalo y el tamaño de paso deben producir al menos un paso.")
 hp = (T - t_0)/nit
 
-# Solución PVIs de segundo orden
-# =================================
-# Método de Euler
+# Calcula la curva con cuatro maneras distintas de avanzar.
 teu, yeu = pvim2.euler_methord2(t_0,y_0,nit,hp)
-# Método de Heun
 the, yhe = pvim2.heun_methord2(t_0,y_0,nit,hp)
-# Método de Punto Medio
 tptom, yptom = pvim2.ptomed_methord2(t_0,y_0,nit,hp)
-# Método de Runge-Kutta de 4to orden
 trk4, yrk4 = pvim2.rk4_methord2(t_0,y_0,nit,hp)
 
 
-# Gráficas
-# Cantidad de puntos en la gráfica
+# Prepara puntos para mostrar la curva de referencia del ejemplo.
 cpg = 200
-# Generación de puntos en el intervalo [t_0,T]
 t_v = np.linspace(t_0,T,cpg)
 
+# Dibuja la solución de referencia calculada por SciPy.
 plt.figure()
 plt.plot(dfp2.funcsolref(t_0, T, y_0).t, dfp2.funcsolref(t_0, T, y_0).y[0], 'r', label='Solución de referencia (solve_ivp)')
 plt.xlabel('t')

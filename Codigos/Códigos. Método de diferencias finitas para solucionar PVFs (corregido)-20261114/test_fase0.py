@@ -7,10 +7,12 @@ from metdf_solpvf import diffincentr
 
 
 def exact_solution(x):
+    """Da el valor conocido de la curva para comparar el cálculo."""
     return x**4 - x**2 + 3
 
 
 def test_single_interior_node():
+    """Comprueba que el cálculo incluya los dos extremos cuando hay un punto interior."""
     x = np.linspace(1.0, 2.0, 3)
     h = 0.5
     x_i = x[1]
@@ -24,11 +26,13 @@ def test_single_interior_node():
 
 
 def main():
+    # Configura la ecuación del ejercicio del taller.
     dfp.A = lambda x: np.asarray(x)**2
     dfp.B = lambda x: -5*np.asarray(x)
     dfp.C = lambda x: np.full_like(np.asarray(x), 8, dtype=float)
     dfp.f = lambda x: np.full_like(np.asarray(x), 24, dtype=float)
 
+    # Resuelve el ejercicio con pasos cada vez más pequeños.
     test_single_interior_node()
     x_0, x_n = 1.0, 2.0
     y_0, y_n = exact_solution(x_0), exact_solution(x_n)
@@ -40,6 +44,7 @@ def main():
     print("| h | Error RMS | Factor RMS previo/actual |")
     print("|---:|---:|---:|")
 
+    # Guarda errores y porcentajes para cada tamaño de paso.
     for h in step_sizes:
         n = int(round((x_n - x_0)/h))
         h = (x_n - x_0)/n
@@ -55,6 +60,7 @@ def main():
         factor = "N/A" if index == 0 else f"{results[index-1][1]/rms:.6f}"
         print(f"| {h:.5f} | {rms:.10e} | {factor} |")
 
+    # Comprueba que al reducir el paso a la mitad el error casi se divida por cuatro.
     for index in range(1, len(results)):
         factor = results[index-1][1]/results[index][1]
         if not np.isclose(factor, 4.0, rtol=0.12):
@@ -62,6 +68,7 @@ def main():
                 f"Convergencia O(h^2) no verificada: factor observado {factor:.6f}."
             )
 
+    # Muestra cuánto se aparta cada punto de su valor conocido.
     print("\nError verdadero porcentual por nodo:")
     for h, _, x, percent_error in results:
         print(f"\nh = {h:.5f}")

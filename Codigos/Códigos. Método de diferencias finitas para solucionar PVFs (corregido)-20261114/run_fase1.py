@@ -10,7 +10,8 @@ from metdf_solpvf import diffincentr
 
 
 def exercise_1f():
-    """Valida la condición Robin con y'' + 3y = 6x."""
+    """Comprueba que el cálculo respete un apoyo elástico conocido."""
+    # Guarda las fórmulas actuales para restaurarlas al terminar la prueba.
     original_coefficients = dfp.A, dfp.B, dfp.C, dfp.f
     dfp.A = lambda x: np.ones_like(np.asarray(x, dtype=float))
     dfp.B = lambda x: np.zeros_like(np.asarray(x, dtype=float))
@@ -18,6 +19,7 @@ def exercise_1f():
     dfp.f = lambda x: 6.0 * np.asarray(x, dtype=float)
 
     try:
+        # Compara el resultado numérico con la solución conocida del ejercicio.
         h = 0.01
         x = np.linspace(0.0, 1.0, int(round(1.0 / h)) + 1)
         y = diffincentr(x, 0.0, None, len(x) - 1, h, right_bc="robin", kappa=1.0)
@@ -37,13 +39,16 @@ def exercise_1f():
 
 
 def main():
+    # Revisa primero que el apoyo elástico funcione correctamente.
     exercise_1f()
 
+    # Prepara la malla de seis pulgadas y resuelve las tres variantes de la viga.
     h = 6.0
     n = int(round(dfp.L / h))
     h = dfp.L / n
     x = np.linspace(0.0, dfp.L, n + 1)
 
+    # Obtiene el caso base exacto y las soluciones numéricas para A y B.
     base = dfp.funcsolex(x)
     variant_a = diffincentr(x, 0.0, 0.0, n, h)
 
@@ -56,12 +61,14 @@ def main():
         x, 0.0, None, n, h, right_bc="robin", kappa=dfp.KAPPA,
         c_func=dfp.C_const, forcing_func=dfp.f_const
     )
+    # Confirma los valores esperados en el centro y en el extremo derecho.
     center_index = n // 2
     if not np.isclose(variant_b[center_index], 3.845e-3, rtol=2e-3):
         raise AssertionError("La deflexión central de la Variante B no coincide.")
     if not np.isclose(variant_b[-1], 7.225e-4, rtol=2e-3):
         raise AssertionError("La deflexión en x=l de la Variante B no coincide.")
 
+    # Imprime las deflexiones y los errores de comparación.
     print("\nComparación de deflexiones (unidades: pulg; malla cada 6 pulg)")
     print("| x (pulg) | Caso base | Variante A | Variante B |")
     print("|---:|---:|---:|---:|")
@@ -86,6 +93,7 @@ def main():
             f"x_max = {x[index]:.1f} pulg (w = {values[index]:.10e} pulg)."
         )
 
+    # Dibuja las tres curvas y guarda la comparación junto al script.
     dense_x = np.linspace(0.0, dfp.L, 500)
     plt.figure(figsize=(10, 6))
     plt.plot(dense_x, dfp.funcsolex(dense_x), label="Caso base (analítico)")

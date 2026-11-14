@@ -15,6 +15,7 @@ PVF_DIRECTORY = (
 
 
 def load_pvf_module(module_name):
+    """Abre un módulo de la viga guardado en la carpeta vecina."""
     module_path = PVF_DIRECTORY / f"{module_name}.py"
     spec = importlib.util.spec_from_file_location(module_name, module_path)
     if spec is None or spec.loader is None:
@@ -37,7 +38,9 @@ OUTPUT_PATH = Path(__file__).with_name("fase3_disparo.png")
 
 
 def beam_rhs(inertia):
+    """Crea la regla que describe cómo se curva la viga para una rigidez dada."""
     def funced(x, state):
+        # Combina la rigidez y la carga para obtener el cambio de pendiente.
         force_term = beam.Q * x * (x - beam.L) / 2.0
         curvature = (
             beam.S * state[0] + force_term
@@ -48,6 +51,8 @@ def beam_rhs(inertia):
 
 
 def finite_difference_base(x, intervals):
+    """Calcula el caso base y restaura las fórmulas originales al terminar."""
+    # Guarda las fórmulas variables antes de usar la rigidez fija del caso base.
     original = beam.A, beam.B, beam.C, beam.f
     beam.A = lambda value: np.ones_like(np.asarray(value, dtype=float))
     beam.B = lambda value: np.zeros_like(np.asarray(value, dtype=float))
@@ -66,14 +71,17 @@ def finite_difference_base(x, intervals):
 
 
 def rms(first, second):
+    """Resume en un valor cuánto difieren dos curvas."""
     return float(np.sqrt(np.mean((np.asarray(first) - np.asarray(second)) ** 2)))
 
 
 def main():
+    # Prepara una malla común para comparar todos los cálculos.
     intervals = int(round(beam.L / STEP_SIZE))
     h = beam.L / intervals
     x = np.linspace(0.0, beam.L, intervals + 1)
 
+    # Obtiene el caso base exacto y las soluciones numéricas por dos métodos.
     exact_base = beam.funcsolex(x)
     fd_base = finite_difference_base(x, intervals)
     shot_x_base, shot_base, slope_base = disparo_lineal(
@@ -84,6 +92,7 @@ def main():
         0.0, beam.L, 0.0, 0.0, h, return_slope=True
     )
 
+    # Calcula una referencia independiente para la viga con rigidez variable.
     reference_a = beam.funcsolref(
         x, np.zeros((2, x.size)), y_0=0.0, y_n=0.0
     )
@@ -94,6 +103,7 @@ def main():
         0.0, beam.L, 0.0, 0.0, h, return_slope=True
     )
 
+    # Verifica que ambos métodos hayan usado las mismas posiciones.
     if not np.allclose(x, shot_x_base) or not np.allclose(x, shot_x_a):
         raise AssertionError("Las mallas de diferencias finitas y disparo no coinciden.")
 
@@ -105,6 +115,7 @@ def main():
             f"RMS base={rms_base:.3e}, Variante A={rms_a:.3e}."
         )
 
+    # Imprime las pendientes iniciales, diferencias y resultados punto a punto.
     print(f"Malla: h={h:g} pulg, {intervals} subintervalos")
     print(f"Pendiente inicial Caso Base z* = {slope_base:.12e} pulg/pulg")
     print(f"Pendiente inicial Variante A z* = {slope_a:.12e} pulg/pulg")
@@ -120,6 +131,7 @@ def main():
             f"{row[6]:.10e} |"
         )
 
+    # Dibuja las curvas y guarda la comparación para revisarla después.
     dense_x = np.linspace(0.0, beam.L, 500)
     plt.figure(figsize=(11, 6.5))
     plt.plot(dense_x, beam.funcsolex(dense_x), "k--", label="Caso base: exacta")

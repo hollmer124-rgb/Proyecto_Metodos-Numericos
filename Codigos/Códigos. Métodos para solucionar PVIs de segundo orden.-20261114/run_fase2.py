@@ -9,17 +9,20 @@ import deffuncionespvi2 as model
 from met_solpvi_sist import eul_meth, heun_meth, pm_meth, rk4_meth
 
 
+# Métodos que se comparan en los ejercicios de práctica.
 INTEGRATORS = (
     ("Euler", eul_meth),
     ("Heun", heun_meth),
     ("Punto Medio", pm_meth),
     ("RK4", rk4_meth),
 )
+# Guarda las imágenes junto al script que las genera.
 OUTPUT_DIRECTORY = Path(__file__).parent
 
 
 def validate_workshop():
     """Compara los cuatro integradores con las soluciones exactas del taller."""
+    # Define los ejercicios y los valores conocidos para comprobarlos.
     root_1b = np.sqrt(8.0 - 0.3**2)
 
     def exercise_1a(t, y):
@@ -46,6 +49,7 @@ def validate_workshop():
     print("Validacion del Taller de PVIs (error RMS de y)")
     print("| Ejercicio | Metodo | Error RMS |")
     print("|---|---|---:|")
+    # Ejecuta cada método y presenta cuánto se aparta de la respuesta conocida.
     for label, funced, initial_state, end_time, exact in cases:
         nit = int(round(end_time / h))
         for method_name, integrator in INTEGRATORS:
@@ -60,11 +64,13 @@ def validate_workshop():
 
 def run_unforced_case():
     """Compara amortiguamientos lineales con F0=0 en 0 <= t <= 15 s."""
+    # Calcula el movimiento libre para cada nivel de fricción.
     h = 0.01
     nit = int(round(model.T_END / h))
     initial_state = [model.INITIAL_DISPLACEMENT, model.INITIAL_VELOCITY]
     responses = {}
 
+    # Dibuja y guarda juntas las respuestas del caso sin fuerza externa.
     plt.figure(figsize=(9, 5.5))
     for damping in model.LINEAR_DAMPING_VALUES:
         funced = lambda t, y, c=damping: model.bridge_linear(t, y, c)
@@ -93,6 +99,7 @@ def run_unforced_case():
 
 def run_resonance_sweep():
     """Calcula las amplitudes y refina el máximo de resonancia para c=5."""
+    # Añade frecuencias cercanas al pico esperado para medirlo mejor.
     h = 0.02
     linear_damping = 5.0
     resonance_frequency = np.sqrt(
@@ -118,6 +125,7 @@ def run_resonance_sweep():
     initial_state = [model.INITIAL_DISPLACEMENT, model.INITIAL_VELOCITY]
     amplitudes = {}
 
+    # Mide la respuesta al final de cada simulación, cuando ya se ha asentado.
     for damping in model.LINEAR_DAMPING_VALUES:
         frequencies = frequency_grids[damping]
         curve = []
@@ -129,6 +137,7 @@ def run_resonance_sweep():
             window_start = simulation_end - 3.0 * (2.0 * np.pi / omega)
             steady_times = times[times >= window_start]
             steady_state = states[times >= window_start, 0]
+            # Separa la oscilación de la fuerza de los cambios pasajeros.
             harmonic_basis = np.column_stack(
                 (
                     np.cos(omega * steady_times),
@@ -144,6 +153,7 @@ def run_resonance_sweep():
             )
         amplitudes[damping] = (frequencies, np.asarray(curve))
 
+    # Busca el punto más alto, lo compara con la fórmula y dibuja el barrido.
     plt.figure(figsize=(9, 5.5))
     for damping, (frequencies, curve) in amplitudes.items():
         plt.plot(frequencies, curve, "o-", label=f"c = {damping:g} Ns/m")
@@ -207,6 +217,7 @@ def run_resonance_sweep():
 
 def run_quadratic_damping_case():
     """Compara amortiguamiento cuadrático puro y combinado en régimen estable."""
+    # Mantiene la simulación el tiempo suficiente para medir el movimiento repetido.
     h = 0.005
     simulation_end = 200.0
     omega = 0.9853
@@ -223,6 +234,7 @@ def run_quadratic_damping_case():
     figure, axes = plt.subplots(2, 1, figsize=(10, 8), sharex=True)
     amplitudes = {}
 
+    # Resuelve los dos casos con RK4 y con la función de referencia de SciPy.
     for axis, (label, linear_damping, expected_amplitude) in zip(axes, cases):
         funced = lambda t, y, c=linear_damping: model.bridge_quadratic(
             t, y, model.FORCE_AMPLITUDE, omega, c
@@ -238,6 +250,7 @@ def run_quadratic_damping_case():
             linear_damping=linear_damping,
         )
         rms = float(np.sqrt(np.mean((rk_states[:, 0] - reference.y[0]) ** 2)))
+        # Mide la amplitud en los últimos ciclos y verifica el valor esperado.
         steady_state = rk_states[steady_mask, 0]
         amplitude = float(0.5 * (np.max(steady_state) - np.min(steady_state)))
         amplitudes[linear_damping] = amplitude
@@ -267,6 +280,7 @@ def run_quadratic_damping_case():
         axis.grid(True, alpha=0.3)
         axis.legend()
 
+    # Compara la reducción con el caso lineal y con el cuadrático puro.
     linear_only_amplitude = (
         model.FORCE_AMPLITUDE / model.MASS
         / np.sqrt(
@@ -300,6 +314,7 @@ def run_quadratic_damping_case():
 
 
 def main():
+    # Ejecuta las comprobaciones y guarda las tres gráficas de esta fase.
     print(
         "Modelo de pasarela: m={:g} kg, k={:g} N/m, "
         "omega_n={:.4f} rad/s".format(

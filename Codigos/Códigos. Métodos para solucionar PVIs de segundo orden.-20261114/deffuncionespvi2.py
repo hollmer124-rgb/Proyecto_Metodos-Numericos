@@ -1,15 +1,9 @@
-"""
-Módulo en el que se definen las funciones que se utilizan
-en los métodos de solución de PVIs.
-* funced: función presente en la ecuación diferencial.
-* funcsolex: solución exacta del PVI en caso de existir.
-* funsolref: solución de referencia del PVI utilizando solve_ivp.
-"""
+"""Guarda los datos de la pasarela y las reglas para calcular su movimiento."""
 
 import numpy as np
 from scipy.integrate import solve_ivp
 
-# Parámetros del modelo de vibración de la pasarela (Equipo n = 2)
+# Medidas y condiciones iniciales de la pasarela del equipo.
 MASS = 20.0
 STIFFNESS = 20.0
 INITIAL_DISPLACEMENT = 1.0
@@ -22,7 +16,7 @@ FREQUENCIES = np.linspace(0.2, 3.0, 29)
 
 
 def bridge_linear(t, y, damping, force_amplitude=0.0, omega=0.0):
-    """Sistema [x', v'] de la pasarela con amortiguamiento lineal."""
+    """Calcula cómo cambian la posición y la velocidad con fricción simple."""
     state = np.asarray(y, dtype=float)
     if state.shape != (2,):
         raise ValueError("El estado de la pasarela debe contener [x, v].")
@@ -34,7 +28,7 @@ def bridge_linear(t, y, damping, force_amplitude=0.0, omega=0.0):
 
 
 def bridge_quadratic(t, y, force_amplitude=0.0, omega=0.0, linear_damping=0.0):
-    """Sistema [x', v'] con amortiguamiento lineal y cuadrático."""
+    """Calcula el movimiento con fricción simple, por velocidad o ambas."""
     state = np.asarray(y, dtype=float)
     if state.shape != (2,):
         raise ValueError("El estado de la pasarela debe contener [x, v].")
@@ -51,7 +45,7 @@ def bridge_quadratic(t, y, force_amplitude=0.0, omega=0.0, linear_damping=0.0):
 def bridge_nonlinear_reference(
     t0, t_end, y0, force_amplitude, omega, t_eval=None, linear_damping=0.0
 ):
-    """Referencia RK45 de SciPy para la Variante C."""
+    """Calcula una segunda solución para comparar el caso de fricción variable."""
     state = np.asarray(y0, dtype=float)
     if state.shape != (2,):
         raise ValueError("y0 debe contener [x0, v0].")
@@ -64,6 +58,7 @@ def bridge_nonlinear_reference(
         if t_eval[0] < t0 or t_eval[-1] > t_end:
             raise ValueError("Los valores de t_eval deben estar dentro de [t0, t_end].")
 
+    # Usa el método de SciPy y comprueba que termine sin errores.
     solution = solve_ivp(
         lambda t, y: bridge_quadratic(
             t, y, force_amplitude, omega, linear_damping
@@ -80,17 +75,18 @@ def bridge_nonlinear_reference(
     return solution
 
 
-# Función f de la EDO (y'' = g(t,y,y')) 
+# Ecuación y solución del ejemplo introductorio del taller.
 def funced(t,y):
+    """Calcula el cambio que pide la ecuación del ejemplo."""
     yder2 = 4*y[0] + 12*t        
     return yder2
 
-# Derivada de funcraiz
 def funcsolex(t):
+    """Devuelve la respuesta conocida del ejemplo para comparar."""
     y = 3*np.exp(2*t) + np.exp(-2*t) - 3*t
     return y
 
-# Solución de referencia del PVI
 def funcsolref(t_0, T, y_0):
+    """Devuelve la curva del ejemplo calculada por SciPy."""
     sol = solve_ivp(lambda t, y: [y[1], 4*y[0] + 12*t], [t_0, T], y_0, rtol = 1e-10)
     return sol

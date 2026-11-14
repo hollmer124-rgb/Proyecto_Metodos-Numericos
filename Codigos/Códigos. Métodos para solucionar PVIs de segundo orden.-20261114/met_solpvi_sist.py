@@ -1,9 +1,11 @@
-"""Integradores explícitos para sistemas de EDOs de primer orden."""
+"""Ofrece cuatro maneras de avanzar paso a paso una o varias cantidades."""
 
 import numpy as np
 
 
 def _integrate(funced, t0, y0, nit, h, method):
+    """Prepara los resultados y repite el avance elegido en cada paso."""
+    # Comprueba que la función, el paso y las condiciones iniciales sean válidos.
     if not callable(funced):
         raise TypeError("funced debe ser una función callable.")
     if not isinstance(nit, (int, np.integer)) or nit < 0:
@@ -13,12 +15,14 @@ def _integrate(funced, t0, y0, nit, h, method):
     if not np.isfinite(h) or h <= 0:
         raise ValueError("h debe ser positivo y finito.")
 
+    # Convierte el inicio en una lista de valores que el programa pueda calcular.
     state = np.asarray(y0, dtype=float)
     if state.ndim == 0:
         state = state.reshape(1)
     if state.ndim != 1 or state.size == 0:
         raise ValueError("y0 debe ser un escalar o un vector unidimensional no vacío.")
 
+    # Verifica que la función entregue un cambio por cada valor inicial.
     def evaluate(t, y):
         derivative = np.asarray(funced(t, y.copy()), dtype=float)
         if derivative.ndim == 0 and y.size == 1:
@@ -30,6 +34,7 @@ def _integrate(funced, t0, y0, nit, h, method):
             )
         return derivative
 
+    # Guarda todos los tiempos y resultados, incluido el punto inicial.
     times = t0 + h * np.arange(nit + 1, dtype=float)
     states = np.empty((nit + 1, state.size), dtype=float)
     states[0] = state
@@ -39,7 +44,7 @@ def _integrate(funced, t0, y0, nit, h, method):
 
 
 def eul_meth(funced, t0, y0, nit, h):
-    """Euler explícito; retorna tiempos y estados de forma (nit+1, N)."""
+    """Avanza usando solo la información disponible al inicio de cada paso."""
     def step(fun, t, y, step_size):
         return y + step_size * fun(t, y)
 
@@ -47,7 +52,7 @@ def eul_meth(funced, t0, y0, nit, h):
 
 
 def heun_meth(funced, t0, y0, nit, h):
-    """Heun explícito de segundo orden para un sistema vectorial."""
+    """Mejora cada paso promediando los cambios al inicio y al final."""
     def step(fun, t, y, step_size):
         k1 = fun(t, y)
         k2 = fun(t + step_size, y + step_size * k1)
@@ -57,7 +62,7 @@ def heun_meth(funced, t0, y0, nit, h):
 
 
 def pm_meth(funced, t0, y0, nit, h):
-    """Método explícito del punto medio de segundo orden."""
+    """Calcula el cambio en la mitad del paso y lo usa para avanzar."""
     def step(fun, t, y, step_size):
         k1 = fun(t, y)
         k2 = fun(t + step_size / 2.0, y + step_size * k1 / 2.0)
@@ -67,7 +72,7 @@ def pm_meth(funced, t0, y0, nit, h):
 
 
 def rk4_meth(funced, t0, y0, nit, h):
-    """Runge-Kutta clásico de cuarto orden para un sistema vectorial."""
+    """Combina cuatro estimaciones para obtener un avance más preciso."""
     def step(fun, t, y, step_size):
         k1 = fun(t, y)
         k2 = fun(t + step_size / 2.0, y + step_size * k1 / 2.0)
